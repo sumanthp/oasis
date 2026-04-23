@@ -116,14 +116,28 @@
 
     <section id="architecture" class="section">
         <h2 class="section-title">Enterprise Architecture</h2>
-        <div class="glass-card">
-            <p style="margin-bottom: 20px;">Oasis is built to be secure, scalable, and fully air-gapped.</p>
-            <ul style="list-style-position: inside; line-height: 1.8;">
-                <li><strong>FastAPI Orchestrator:</strong> Handles RBAC, JWT authentication, and session management.</li>
-                <li><strong>Dynamic Sandboxing:</strong> Uses the Docker SDK to spin up isolated, ephemeral <code>code-server</code> IDE containers per candidate.</li>
-                <li><strong>Async Background Evaluation:</strong> Grader scripts run inside strictly isolated disposable containers, eliminating Remote Code Execution (RCE) risks.</li>
-                <li><strong>Persistent Storage:</strong> Metadata and candidate trace logs are safely stored via mounted SQLite volumes.</li>
-            </ul>
+        <p style="text-align: center; color: var(--text-secondary); max-width: 600px; margin: 0 auto 40px;">Oasis is built to be secure, scalable, and fully air-gapped.</p>
+        <div class="feature-grid">
+            <div class="glass-card feature-card">
+                <div class="feature-icon">🧠</div>
+                <h3>FastAPI Orchestrator</h3>
+                <p>A high-performance asynchronous backend that handles RBAC, JWT authentication, and session management seamlessly.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <div class="feature-icon">🐳</div>
+                <h3>Dynamic Sandboxing</h3>
+                <p>Uses the Docker SDK to spin up completely isolated, ephemeral <code>code-server</code> IDE containers natively on the host.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>Async Background Evaluation</h3>
+                <p>Grader scripts are executed inside strictly isolated disposable containers, eliminating all Remote Code Execution (RCE) risks.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <div class="feature-icon">💾</div>
+                <h3>Persistent Storage</h3>
+                <p>Metadata and candidate trace logs are safely stored via mounted SQLite volumes, ensuring crash resilience.</p>
+            </div>
         </div>
     </section>
 
