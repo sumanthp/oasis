@@ -72,14 +72,58 @@
             </div>
             <div class="glass-card feature-card">
                 <div class="feature-icon">📦</div>
-                <h3>Native Sandboxes</h3>
-                <p>Provide a rich development environment. Candidates code inside a dynamically spawned VS Code environment right in their browser.</p>
+                <h3>Dynamic Docker Sandboxes</h3>
+                <p>Provide a rich development environment. The orchestrator dynamically spawns an air-gapped VS Code container for every candidate.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3>Async Secure Evaluation</h3>
+                <p>Grader scripts are executed inside disposable, isolated containers using background workers, completely eliminating remote code execution vulnerabilities.</p>
             </div>
             <div class="glass-card feature-card">
                 <div class="feature-icon">📊</div>
                 <h3>Recruiter Intelligence</h3>
                 <p>A beautiful dashboard to visualize pass rates, evaluate raw code submissions, and generate secure one-time invite links.</p>
             </div>
+        </div>
+    </section>
+
+    <section id="domains" class="section">
+        <h2 class="section-title">5 Pre-Loaded Domains</h2>
+        <div class="feature-grid">
+            <div class="glass-card feature-card">
+                <h3>Domain A: Agentic MCP</h3>
+                <p>Debug a LangGraph financial agent stuck in a recursive tool-calling loop.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <h3>Domain B: RAG Systems</h3>
+                <p>Fix a ChromaDB retrieval system suffering from hallucination.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <h3>Domain C: LLM Security</h3>
+                <p>Defend a customer support bot against malicious jailbreaks and prompt injections.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <h3>Domain D: MLOps</h3>
+                <p>Refactor a blocking PyTorch endpoint into an optimized, async global inference cache.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <h3>Domain E: AI SWE</h3>
+                <p>Debug core Python algorithms using an AI coding assistant.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="architecture" class="section">
+        <h2 class="section-title">Enterprise Architecture</h2>
+        <div class="glass-card">
+            <p style="margin-bottom: 20px;">Oasis is built to be secure, scalable, and fully air-gapped.</p>
+            <ul style="list-style-position: inside; line-height: 1.8;">
+                <li><strong>FastAPI Orchestrator:</strong> Handles RBAC, JWT authentication, and session management.</li>
+                <li><strong>Dynamic Sandboxing:</strong> Uses the Docker SDK to spin up isolated, ephemeral <code>code-server</code> IDE containers per candidate.</li>
+                <li><strong>Async Background Evaluation:</strong> Grader scripts run inside strictly isolated disposable containers, eliminating Remote Code Execution (RCE) risks.</li>
+                <li><strong>Persistent Storage:</strong> Metadata and candidate trace logs are safely stored via mounted SQLite volumes.</li>
+            </ul>
         </div>
     </section>
 

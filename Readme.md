@@ -11,21 +11,32 @@ Instead of testing candidates on generic LeetCode problems, Oasis drops them int
 
 ## 🌟 Key Features
 
-*   **Real-World Scenarios**: Candidates are dropped into a fully containerized VS Code (`code-server`) workspace with broken AI implementations (e.g., recursive tool-calling loops in LangGraph).
-*   **LLM-as-a-Judge**: Candidates receive real-time, iterative feedback from an automated judge powered by `Ollama` running locally or within your private cloud.
+*   **Real-World Scenarios**: Candidates are dropped into a dynamically provisioned, completely isolated VS Code (`code-server`) workspace with broken AI implementations (e.g., recursive tool-calling loops in LangGraph).
+*   **LLM-as-a-Judge**: Candidates receive async feedback from an automated judge. Grader scripts run inside secure, disposable Docker containers to prevent code execution vulnerabilities.
 *   **Recruiter Intelligence**: A command center for recruiters to visualize pass/fail ratios, average test times, and inspect the raw code / trace logs submitted by the candidate.
 *   **Invite-Only Sessions**: Securely generate single-use JWT registration links for candidates to take assessments.
-*   **Crash Resilience**: If a candidate accidentally closes their tab during a 3-hour test, the system automatically preserves their IDE state and provides a "Resume Session" button.
+*   **Crash Resilience**: All metadata is persisted on host volumes. If a candidate accidentally closes their tab during a test, the system preserves their IDE container and provides a "Resume Session" button.
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Enterprise Architecture
 
 Oasis consists of the following components running securely via Docker Compose:
-1. **Orchestrator (`platform/api`)**: A FastAPI backend that handles RBAC, JWT authentication, and session provisioning. Uses SQLite for metadata tracking.
+1. **Orchestrator (`platform/api`)**: A FastAPI backend that handles RBAC, JWT authentication, and session provisioning. Uses SQLite mounted on a persistent Docker volume.
 2. **Frontend UI (`platform/ui`)**: A glassmorphism-themed, modern web interface.
-3. **IDE Container**: A dynamically spawned `codercom/code-server` workspace injected directly into the frontend via iframe.
-4. **AI Judge (`evaluator/grader.py`)**: A Python subprocess running LangChain to analyze the candidate's code outputs and output trace logs.
+3. **Dynamic Sandboxing (Docker API)**: The orchestrator uses the Docker SDK to dynamically spin up an isolated, ephemeral `codercom/code-server` workspace and injects it directly into the frontend via iframe.
+4. **Asynchronous Graders (`evaluator/grader.py`)**: A Python script utilizing `langchain` and `httpx` to analyze the candidate's logic. Evaluation runs in an airgapped, disposable container using FastAPI `BackgroundTasks` to prevent RCE.
+
+---
+
+## 🎯 Assessment Domains
+
+The platform comes pre-loaded with 5 major AI engineering challenges:
+1. **Domain A (Agentic MCP)**: Debug a LangGraph financial agent stuck in a recursive tool-calling loop.
+2. **Domain B (RAG Systems)**: Fix a ChromaDB retrieval system suffering from hallucination due to poor chunking and high top-K thresholds.
+3. **Domain C (LLM Security)**: Defend a customer support bot against malicious jailbreaks and prompt injections.
+4. **Domain D (MLOps & Inference)**: Refactor a blocking PyTorch endpoint into an optimized, async global inference cache.
+5. **Domain E (AI SWE)**: Debug core Python algorithms using an AI coding assistant.
 
 ---
 
