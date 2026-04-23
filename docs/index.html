@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Oasis - AI Engineering Sandbox</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-mesh">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <nav class="glass-nav">
+        <div class="logo">
+            <span class="logo-icon">🏝️</span>
+            <span class="logo-text">Oasis</span>
+        </div>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#architecture">Architecture</a>
+            <a href="https://github.com/sumanthp/oasis" target="_blank" class="btn-outline">View on GitHub</a>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">OPEN SOURCE RELEASE</div>
+            <h1 class="premium-text">The Enterprise Assessment Sandbox for AI Engineers.</h1>
+            <p class="hero-subtitle">Stop relying on generic LeetCode puzzles. Drop candidates into a real, sandboxed "broken production" environment with a built-in automated LLM Judge.</p>
+            <div class="hero-actions">
+                <a href="https://github.com/sumanthp/oasis" class="btn-primary">Clone Repository</a>
+                <a href="#quickstart" class="btn-secondary">Read the Docs</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="glass-card mockup-card">
+                <div class="mockup-header">
+                    <span class="dot red"></span>
+                    <span class="dot yellow"></span>
+                    <span class="dot green"></span>
+                </div>
+                <div class="mockup-body">
+                    <div class="code-line"><span class="keyword">def</span> <span class="function">assess_candidate</span>(skills):</div>
+                    <div class="code-line indented">container = spawn_sandbox()</div>
+                    <div class="code-line indented">run_llm_judge(container)</div>
+                    <div class="code-line indented"><span class="keyword">return</span> <span class="string">"HIRE"</span></div>
+                    <br>
+                    <div class="code-line terminal-text">> Containerizing code-server IDE...</div>
+                    <div class="code-line terminal-text">> Initializing Ollama Judge...</div>
+                    <div class="code-line terminal-text">> Ready for evaluation.</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section id="features" class="section">
+        <h2 class="section-title">Evaluate What Actually Matters</h2>
+        <div class="feature-grid">
+            <div class="glass-card feature-card">
+                <div class="feature-icon">🛡️</div>
+                <h3>Adversarial Testing</h3>
+                <p>Test candidates on real-world edge cases like recursive tool-calling loops, RAG hallucination, and prompt injection defenses.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <div class="feature-icon">⚖️</div>
+                <h3>LLM-as-a-Judge</h3>
+                <p>Automated grading via locally-hosted Ollama. Candidates get instant feedback while you get detailed AI trace logs.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <div class="feature-icon">📦</div>
+                <h3>Native Sandboxes</h3>
+                <p>Provide a rich development environment. Candidates code inside a dynamically spawned VS Code environment right in their browser.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Recruiter Intelligence</h3>
+                <p>A beautiful dashboard to visualize pass rates, evaluate raw code submissions, and generate secure one-time invite links.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="quickstart" class="section">
+        <h2 class="section-title">Quick Start</h2>
+        <div class="glass-card code-showcase">
+            <div class="mockup-header">Terminal</div>
+            <pre><code><span class="comment"># 1. Clone the repository</span>
+git clone https://github.com/sumanthp/oasis.git
+cd oasis
+
+<span class="comment"># 2. Generate a secure secret key</span>
+export SECRET_KEY=$(openssl rand -hex 32)
+
+<span class="comment"># 3. Spin up the orchestrator and AI Judge</span>
+docker-compose up -d --build
+
+<span class="comment"># Navigate to http://localhost:8000 and login with admin/admin</span></code></pre>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>&copy; 2026 Oasis AI Screening. Released under Apache 2.0 (Commons Clause).</p>
+    </footer>
+</body>
+</html>
