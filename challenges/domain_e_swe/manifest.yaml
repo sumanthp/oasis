@@ -1,0 +1,19 @@
+name: "AI-Driven SWE (The Flawed AI PR)"
+version: "1.0.0"
+description: "An AI coding assistant generated a feature with a subtle race condition and poor test coverage. The candidate must debug, refactor, and write robust tests."
+difficulty: "hard"
+tags: ["Software Engineering", "Concurrency", "Testing", "Debugging"]
+
+infrastructure:
+  services: [] # No external mock services needed for this challenge
+
+evaluation:
+  timeout_seconds: 300
+  metrics:
+    - name: "Race Condition Mitigated"
+      type: "unit-test"
+      description: "Run the candidate's tests with high concurrency to verify the race condition is fixed."
+    - name: "Test Coverage"
+      type: "static-analysis"
+      description: "Verify the candidate added proper assertions rather than the flawed AI tests."
+  grader_script: "evaluator/grader.py"

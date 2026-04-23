@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Engine | Agentic Assessment Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="background-mesh">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <nav class="glass-nav">
+        <div class="logo">
+            <span class="logo-icon">⚡</span>
+            <span class="logo-text">AI-Engine</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard" class="active">Candidate Portal</a>
+            <a href="/admin">Recruiter Admin</a>
+        </div>
+        <div class="user-profile">
+            <a href="/profile" style="text-decoration: none; display: flex; align-items: center; gap: 1rem;">
+                <div class="avatar" id="nav-avatar">U</div>
+                <span id="nav-user" style="color: white;">User</span>
+            </a>
+            <a href="#" onclick="logout()" style="margin-left:15px; color:var(--accent-pink); font-size:0.8rem; text-decoration:none;">Logout</a>
+        </div>
+    </nav>
+
+    <main class="dashboard page-fade-in">
+        <header class="dashboard-header">
+            <h1 class="premium-text">Select Simulation</h1>
+            <p>Prove your production-grade AI engineering skills in adversarial environments.</p>
+        </header>
+
+        <section class="challenge-grid" id="challenge-grid">
+            <!-- Cards will be populated by JS -->
+        </section>
+        </section>
+        
+        <!-- Embedded IDE Container -->
+        <div id="ide-container" class="ide-container" style="display: none;">
+            <div id="ide-timer" style="position: absolute; top: 15px; left: 25px; z-index: 501; color: var(--accent-cyan); font-family: 'JetBrains Mono', monospace; font-size: 1.2rem; font-weight: 800; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 6px; border: 1px solid var(--accent-cyan);">00:00</div>
+            
+            <button class="submit-ide-btn" onclick="testSolution()" id="test-btn" style="right: 340px; background: rgba(255, 204, 0, 0.8); border-color: #ffcc00; color: #000;">Run Tests</button>
+            <button class="submit-ide-btn" onclick="submitSolution()" id="submit-btn" style="right: 210px;">Final Submit</button>
+            <button class="close-ide-btn" onclick="closeIDE()">Exit</button>
+            <iframe id="ide-frame" src="" frameborder="0"></iframe>
+        </div>
+    </main>
+    
+    <div class="modal-overlay" id="launch-modal">
+        <div class="glass-modal">
+            <div class="modal-header">
+                <h2 id="modal-title" style="color: white; margin: 0; font-size: 1.5rem;">Initializing Sandbox...</h2>
+            </div>
+            <div class="modal-body">
+                <div class="terminal-loader">
+                    <div class="terminal-header">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <div class="terminal-body" id="terminal-output">
+                        <p>> Connecting to AWS Orchestrator...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Briefing Modal -->
+    <div class="modal-overlay" id="briefing-modal">
+        <div class="glass-modal">
+            <div class="modal-header">
+                <h2 id="briefing-title" style="color: white; margin: 0; font-size: 1.5rem;">Mission Briefing</h2>
+                <button onclick="closeBriefing()" style="background:none; border:none; color:var(--text-dim); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 2rem;">
+                <p id="briefing-desc" style="color: white; margin-bottom: 1.5rem; font-size: 1.1rem; line-height: 1.6;"></p>
+                <h3 style="color: var(--accent-cyan); margin-bottom: 0.5rem;">Rules of Engagement</h3>
+                <ul style="color: var(--text-dim); margin-bottom: 2rem; line-height: 1.5; padding-left: 1.5rem;">
+                    <li>You have an embedded VS Code environment to work in.</li>
+                    <li>You may use the <strong style="color:var(--accent-pink);">Run Tests</strong> button to get iterative feedback from the AI Judge.</li>
+                    <li>Once you are satisfied, hit <strong style="color:var(--accent-cyan);">Final Submit</strong> to record your grade.</li>
+                    <li>Your time is tracked from the moment you hit deploy.</li>
+                </ul>
+                <button onclick="deployChallenge()" class="btn-primary" style="width: 100%;">Acknowledge & Deploy</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

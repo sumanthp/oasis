@@ -1,0 +1,25 @@
+[project]
+name = "ai-engine"
+version = "0.1.0"
+description = "An open-source, AI-driven technical assessment platform."
+authors = [{name = "Antigravity", email = "antigravity@example.com"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.100.0",
+    "uvicorn>=0.23.0",
+    "boto3>=1.28.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

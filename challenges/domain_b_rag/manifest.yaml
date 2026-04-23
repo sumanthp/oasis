@@ -1,0 +1,23 @@
+name: "RAG Engineering & Hallucination Mitigation"
+version: "1.0.0"
+description: "A dense-vector RAG system is suffering from 'Lost in the Middle' and retrieving poisoned documents. Upgrade to Hybrid Search to restore accuracy."
+difficulty: "medium"
+tags: ["RAG", "Vector Search", "Hybrid Search", "BM25", "LlamaIndex"]
+
+infrastructure:
+  services:
+    - name: "vector-db-mock"
+      type: "python-http"
+      path: "mock_services/vector_db_mock.py"
+      port: 8001
+
+evaluation:
+  timeout_seconds: 180
+  metrics:
+    - name: "Hybrid Search Implementation"
+      type: "code-analysis"
+      description: "Verify that BM25 or lexical search is used in conjunction with dense vector search."
+    - name: "Retrieval Accuracy"
+      type: "trace-analysis"
+      description: "Ensure the top-K retrieved documents contain the true policy document, not the poisoned dense-vector match."
+  grader_script: "evaluator/grader.py"

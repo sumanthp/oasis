@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Engine | Profile</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        .profile-container {
+            max-width: 900px;
+            margin: 4rem auto;
+            padding: 2rem;
+        }
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 3rem;
+            background: var(--glass-bg);
+            padding: 2rem;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(15px);
+        }
+        .profile-avatar-large {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-purple), var(--accent-pink));
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: 800;
+            color: white;
+            box-shadow: 0 10px 30px rgba(255, 0, 85, 0.3);
+        }
+        .profile-info h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .profile-info p {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            backdrop-filter: blur(15px);
+        }
+        .history-table th, .history-table td {
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .history-table th {
+            background: rgba(0,0,0,0.3);
+            color: var(--accent-cyan);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .history-table td {
+            color: #ccc;
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .badge.hire { background: rgba(0, 255, 128, 0.2); color: #00ff80; }
+        .badge.pass { background: rgba(255, 0, 85, 0.2); color: var(--accent-pink); }
+        .badge.review { background: rgba(255, 204, 0, 0.2); color: #ffcc00; }
+        
+        .stat-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--glass-border);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .stat-card h2 {
+            color: var(--accent-cyan);
+            font-size: 3rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-mesh">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <nav class="glass-nav">
+        <div class="logo">
+            <span class="logo-icon">🛡️</span>
+            <span class="logo-text">AI-Engine</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard">Candidate Portal</a>
+            <a href="/admin" id="nav-admin" style="display:none;">Recruiter Admin</a>
+        </div>
+        <div class="user-profile">
+            <a href="/profile" style="text-decoration: none; display: flex; align-items: center; gap: 1rem;">
+                <div class="avatar" id="nav-avatar">U</div>
+                <span id="nav-user" style="color: white;">User</span>
+            </a>
+            <a href="#" onclick="logout()" style="margin-left:15px; color:var(--accent-pink); font-size:0.8rem; text-decoration:none;">Logout</a>
+        </div>
+    </nav>
+
+    <main class="profile-container page-fade-in">
+        <div class="profile-header">
+            <div class="profile-avatar-large" id="profile-initial">U</div>
+            <div class="profile-info">
+                <h1 id="profile-username">Loading...</h1>
+                <p id="profile-role">Role: ...</p>
+                <p id="profile-date" style="font-size: 0.9rem; opacity: 0.7; margin-top: 0.5rem;">Member since: ...</p>
+            </div>
+        </div>
+
+        <div id="content-area">
+            <!-- Dynamically populated -->
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('ai_token');
+            const role = localStorage.getItem('ai_role');
+            
+            if (!token) {
+                window.location.href = '/';
+                return;
+            }
+            
+            if (role === 'admin') {
+                document.getElementById('nav-admin').style.display = 'block';
+            }
+            
+            try {
+                const res = await fetch('/api/profile', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.status === 401) {
+                    return logout();
+                }
+                
+                const data = await res.json();
+                
+                // Update header
+                const initial = data.username.charAt(0).toUpperCase();
+                document.getElementById('profile-initial').innerText = initial;
+                document.getElementById('nav-avatar').innerText = initial;
+                document.getElementById('nav-user').innerText = data.username;
+                
+                document.getElementById('profile-username').innerText = data.username;
+                document.getElementById('profile-role').innerText = `Role: ${data.role.toUpperCase()}`;
+                document.getElementById('profile-date').innerText = `Member since: ${data.created_at}`;
+                
+                const contentArea = document.getElementById('content-area');
+                
+                if (data.role === 'admin') {
+                    contentArea.innerHTML = `
+                        <h2 class="premium-text" style="margin-bottom:1rem;">Platform Statistics</h2>
+                        <div class="stat-card">
+                            <h2>${data.stats.total_evaluations_platform}</h2>
+                            <p style="color:var(--text-dim);">Total Evaluations Processed</p>
+                        </div>
+                    `;
+                } else {
+                    let html = `
+                        <h2 class="premium-text" style="margin-bottom:1rem;">Simulation History</h2>
+                        <table class="history-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Challenge</th>
+                                    <th>Time</th>
+                                    <th>Verdict</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+                    
+                    if (data.history.length === 0) {
+                        html += `<tr><td colspan="4" style="text-align:center;">No simulations completed yet.</td></tr>`;
+                    } else {
+                        data.history.forEach(ev => {
+                            let badgeClass = "review";
+                            if (ev.verdict === "HIRE") badgeClass = "hire";
+                            if (ev.verdict === "PASS") badgeClass = "pass";
+                            html += `
+                                <tr>
+                                    <td>${ev.date}</td>
+                                    <td>${ev.challenge_id}</td>
+                                    <td>${ev.execution_time}</td>
+                                    <td><span class="badge ${badgeClass}">${ev.verdict}</span></td>
+                                </tr>
+                            `;
+                        });
+                    }
+                    html += `</tbody></table>`;
+                    
+                    // Add Resume Session prompt if active session exists
+                    if (data.active_session) {
+                        html = `
+                            <div style="background: rgba(0, 240, 255, 0.1); border: 1px solid var(--accent-cyan); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <h3 style="color: var(--accent-cyan); margin-bottom: 0.5rem;">In-Progress Assessment Detected</h3>
+                                    <p style="color: var(--text-dim); font-size: 0.9rem;">You have an active session for <strong>${data.active_session.challenge_id}</strong>.</p>
+                                </div>
+                                <button onclick="window.location.href='/dashboard'" class="btn-primary" style="padding: 10px 20px;">Resume Session</button>
+                            </div>
+                        ` + html;
+                    }
+                    
+                    contentArea.innerHTML = html;
+                }
+            } catch (err) {
+                console.error("Failed to load profile", err);
+            }
+        });
+
+        function logout() {
+            document.body.classList.add('page-fade-out');
+            setTimeout(() => {
+                localStorage.removeItem('ai_token');
+                localStorage.removeItem('ai_role');
+                localStorage.removeItem('ai_candidate_name');
+                window.location.href = '/';
+            }, 400);
+        }
+    </script>
+</body>
+</html>

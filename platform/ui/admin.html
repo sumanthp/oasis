@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Engine | Recruiter Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .admin-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 2rem;
+        }
+        .admin-header h1 {
+            color: white;
+            font-size: 2.5rem;
+        }
+        
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            overflow: hidden;
+            backdrop-filter: blur(15px);
+        }
+        .results-table th, .results-table td {
+            padding: 1.2rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .results-table th {
+            background: rgba(0,0,0,0.3);
+            color: var(--accent-cyan);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        .results-table td {
+            color: #ccc;
+        }
+        .results-table tr:hover {
+            background: rgba(255,255,255,0.02);
+        }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+        }
+        .badge.hire { background: rgba(0, 255, 128, 0.2); color: #00ff80; }
+        .badge.pass { background: rgba(255, 0, 85, 0.2); color: var(--accent-pink); }
+        .badge.review { background: rgba(255, 204, 0, 0.2); color: #ffcc00; }
+        
+        .feedback-cell {
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: #999;
+            max-width: 400px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+        .feedback-cell:hover {
+            color: white;
+            white-space: normal;
+        }
+        
+        .analytics-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        .analytics-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(15px);
+        }
+        .stat-huge {
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--accent-cyan);
+            margin-top: 0.5rem;
+        }
+        
+        .code-block {
+            background: rgba(0,0,0,0.5);
+            padding: 1rem;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: #ccc;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="background-mesh">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <nav class="glass-nav">
+        <div class="logo">
+            <span class="logo-icon">🛡️</span>
+            <span class="logo-text">AI-Engine | Admin</span>
+        </div>
+        <div class="nav-links">
+            <a href="/dashboard">Candidate Portal</a>
+            <a href="/admin" class="active">Recruiter Admin</a>
+        </div>
+        <div class="user-profile">
+            <a href="/profile" style="text-decoration: none; display: flex; align-items: center; gap: 1rem;">
+                <div class="avatar" id="nav-avatar">A</div>
+                <span id="nav-user" style="color: white;">Admin</span>
+            </a>
+            <a href="#" onclick="logout()" style="margin-left:15px; color:var(--accent-pink); font-size:0.8rem; text-decoration:none;">Logout</a>
+        </div>
+    </nav>
+
+    <main class="admin-container page-fade-in" id="main-content">
+        <div class="admin-header">
+            <div>
+                <h1 class="premium-text">Recruiter Intelligence</h1>
+                <p style="color: var(--text-dim);">Live evaluations, telemetry, and source code capture.</p>
+            </div>
+            <div>
+                <button onclick="generateInvite()" class="btn-primary" style="background: linear-gradient(135deg, var(--accent-purple), #a855f7); box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);">+ Generate Invite Link</button>
+            </div>
+        </div>
+        
+        <div class="analytics-grid">
+            <div class="analytics-card" style="text-align:center; display:flex; flex-direction:column; justify-content:center;">
+                <h3 style="color:white; margin-bottom:1rem;">Average Session Time</h3>
+                <div class="stat-huge" id="stat-avg-time">--s</div>
+                <p style="color:var(--text-dim); margin-top:1rem; font-size:0.9rem;">Total Evaluations: <span id="stat-total" style="color:white;">--</span></p>
+            </div>
+            <div class="analytics-card">
+                <h3 style="color:white; margin-bottom:1rem;">Verdict Distribution</h3>
+                <div style="height: 200px; width: 100%; display:flex; justify-content:center;">
+                    <canvas id="verdictChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <h2 class="premium-text" style="font-size: 1.5rem; margin-bottom: 1rem;">Candidate Submissions</h2>
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Candidate Token</th>
+                    <th>Challenge</th>
+                    <th>Execution Time</th>
+                    <th>Verdict</th>
+                    <th>AI Judge Feedback</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="results-body">
+                <!-- Dynamically populated -->
+            </tbody>
+        </table>
+    </main>
+
+    <main class="admin-container page-fade-in" id="unauthorized-content" style="display: none; text-align: center; padding-top: 5rem;">
+        <h1 class="premium-text" style="color: var(--accent-pink); background: none; -webkit-text-fill-color: var(--accent-pink);">Access Denied</h1>
+        <p style="color: var(--text-dim); margin-top: 1rem; margin-bottom: 3rem; font-size: 1.1rem;">You do not have the required permissions to view the Recruiter Dashboard.</p>
+        <button onclick="window.location.href='/'" class="btn-error-outline">Return to Login</button>
+    </main>
+    
+    <!-- Code Details Modal -->
+    <div class="modal-overlay" id="details-modal">
+        <div class="glass-modal" style="width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+            <div style="padding: 1.5rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                <h2 class="premium-text" style="font-size: 1.5rem;" id="modal-title">Evaluation Details</h2>
+                <button onclick="closeModal()" style="background:none; border:none; color:var(--text-dim); font-size:1.5rem; cursor:pointer;">&times;</button>
+            </div>
+            <div style="padding: 1.5rem; overflow-y: auto;">
+                <h3 style="color: white; margin-bottom: 0.5rem; font-size: 1rem;">Candidate Source Code</h3>
+                <div class="code-block" id="modal-code">Loading...</div>
+                
+                <h3 style="color: var(--accent-pink); margin-bottom: 0.5rem; font-size: 1rem; margin-top: 2rem;">Raw AI Trace Logs</h3>
+                <div class="code-block" id="modal-trace" style="border-color: rgba(255,0,85,0.3);">Loading...</div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let chartInstance = null;
+        let globalEvaluations = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const tbody = document.getElementById('results-body');
+            const token = localStorage.getItem('ai_token');
+            const role = localStorage.getItem('ai_role');
+            const name = localStorage.getItem('ai_candidate_name');
+            
+            if (name) {
+                document.getElementById('nav-user').innerText = name;
+                document.getElementById('nav-avatar').innerText = name.charAt(0).toUpperCase();
+            }
+            
+            if (!token || role !== 'admin') {
+                document.getElementById('main-content').style.display = 'none';
+                document.getElementById('unauthorized-content').style.display = 'block';
+                return;
+            }
+            
+            try {
+                const res = await fetch('/api/admin/evaluations', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.status === 401 || res.status === 403) {
+                    return logout();
+                }
+                
+                const data = await res.json();
+                
+                if (data.evaluations.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;">No evaluations yet.</td></tr>`;
+                    return;
+                }
+                
+                globalEvaluations = data.evaluations;
+                
+                // Update Analytics
+                document.getElementById('stat-total').innerText = data.stats.total;
+                document.getElementById('stat-avg-time').innerText = `${data.stats.avg_time}s`;
+                
+                const ctx = document.getElementById('verdictChart').getContext('2d');
+                chartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['HIRE', 'PASS', 'REVIEW'],
+                        datasets: [{
+                            data: [data.stats.hire, data.stats.pass, data.stats.review],
+                            backgroundColor: ['#00ff80', '#00f0ff', '#ffcc00'],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'right', labels: { color: 'white' } }
+                        }
+                    }
+                });
+                
+                data.evaluations.forEach((ev, index) => {
+                    const tr = document.createElement('tr');
+                    if (index === 0) tr.classList.add('pulse-row'); // latest row pulses
+                    
+                    let badgeClass = "review";
+                    if (ev.verdict === "HIRE") badgeClass = "hire";
+                    if (ev.verdict === "PASS") badgeClass = "pass";
+                    
+                    tr.innerHTML = `
+                        <td>${ev.candidate_id}</td>
+                        <td>${ev.challenge_id}</td>
+                        <td>${ev.execution_time}</td>
+                        <td><span class="badge ${badgeClass}">${ev.verdict}</span></td>
+                        <td class="feedback-cell" title="${ev.feedback.replace(/"/g, '&quot;')}">${ev.feedback}</td>
+                        <td><button onclick="openModal(${index})" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">View Details</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                console.error("Failed to load evaluation data", err);
+            }
+        });
+        
+        async function generateInvite() {
+            const token = localStorage.getItem('ai_token');
+            try {
+                const res = await fetch('/api/admin/invite', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (res.status === 401 || res.status === 403) return logout();
+                
+                const data = await res.json();
+                if (res.ok) {
+                    const inviteUrl = window.location.origin + data.invite_url;
+                    navigator.clipboard.writeText(inviteUrl);
+                    alert("Invite link generated and copied to clipboard!\n\n" + inviteUrl);
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Failed to generate invite.");
+            }
+        }
+
+        function openModal(index) {
+            const ev = globalEvaluations[index];
+            document.getElementById('modal-title').innerText = `Details: ${ev.candidate_id}`;
+            document.getElementById('modal-code').innerText = ev.candidate_code;
+            document.getElementById('modal-trace').innerText = ev.ai_trace_logs;
+            document.getElementById('details-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('details-modal').classList.remove('active');
+        }
+
+        function logout() {
+            document.querySelector('main').classList.remove('page-fade-in');
+            document.querySelector('main').classList.add('page-fade-out');
+            setTimeout(() => {
+                localStorage.removeItem('ai_token');
+                localStorage.removeItem('ai_role');
+                localStorage.removeItem('ai_candidate_name');
+                window.location.href = '/';
+            }, 400);
+        }
+    </script>
+</body>
+</html>

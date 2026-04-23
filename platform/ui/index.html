@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Engine | Assessment Portal</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        .landing-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 80vh;
+        }
+        .login-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 3rem;
+            width: 100%;
+            max-width: 450px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        .login-card h2 {
+            margin-bottom: 0.5rem;
+            color: white;
+            font-size: 2rem;
+        }
+        .login-card p {
+            color: var(--text-dim);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--accent-cyan);
+            border-radius: 8px;
+            color: white;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        .input-group input:focus {
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
+            border-color: #fff;
+        }
+        .btn-primary {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-cyan) 100%);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Outfit', sans-serif;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(255, 0, 85, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="background-mesh">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
+
+    <nav class="glass-nav">
+        <div class="logo">
+            <span class="logo-icon">⚡</span>
+            <span class="logo-text">AI-Engine</span>
+        </div>
+        <div class="user-profile">
+            <span>Assessment Portal</span>
+        </div>
+    </nav>
+
+    <main class="landing-container page-fade-in">
+        <div class="login-card">
+            <h2>Welcome</h2>
+            <p>Enter your credentials to begin.</p>
+            <form onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" placeholder="e.g. admin" required autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="••••••••" required autocomplete="off">
+                </div>
+                <button type="submit" class="btn-primary" style="margin-top: 1rem;">Authenticate</button>
+            </form>
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.1);">
+                <p style="color: var(--text-dim); margin-bottom: 1rem; font-size: 0.9rem;">No account? Try the platform.</p>
+                <button onclick="handleDemoLogin()" class="btn-primary" id="demo-btn" style="background: transparent; border: 1px solid var(--accent-cyan); color: var(--accent-cyan);">TRY DEMO MODE</button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        async function handleLogin(e) {
+            e.preventDefault();
+            const btn = document.querySelector('button[type="submit"]');
+            const main = document.querySelector('main');
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            btn.classList.add('loading');
+            
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.access_token) {
+                    localStorage.setItem('ai_token', data.access_token);
+                    localStorage.setItem('ai_role', data.role);
+                    localStorage.setItem('ai_candidate_name', data.name);
+                    
+                    main.classList.remove('page-fade-in');
+                    main.classList.add('page-fade-out');
+                    setTimeout(() => {
+                        window.location.href = data.role === 'admin' ? '/admin' : '/dashboard';
+                    }, 400);
+                } else {
+                    btn.classList.remove('loading');
+                    alert("Authentication Failed: " + (data.detail || "Invalid credentials"));
+                }
+            } catch (err) {
+                btn.classList.remove('loading');
+                alert("Server Error");
+            }
+        }
+
+        async function handleDemoLogin() {
+            const btn = document.getElementById('demo-btn');
+            const main = document.querySelector('main');
+            
+            btn.classList.add('loading');
+            
+            try {
+                const res = await fetch('/api/auth/demo', { method: 'POST' });
+                const data = await res.json();
+                
+                if (res.ok && data.access_token) {
+                    localStorage.setItem('ai_token', data.access_token);
+                    localStorage.setItem('ai_role', data.role);
+                    localStorage.setItem('ai_candidate_name', data.name);
+                    
+                    main.classList.remove('page-fade-in');
+                    main.classList.add('page-fade-out');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 400);
+                } else {
+                    btn.classList.remove('loading');
+                    alert("Demo Initialization Failed");
+                }
+            } catch (err) {
+                btn.classList.remove('loading');
+                alert("Server Error");
+            }
+        }
+    </script>
+</body>
+</html>

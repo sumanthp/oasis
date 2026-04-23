@@ -1,0 +1,50 @@
+services:
+  # 1. The Core Orchestrator API
+  orchestrator:
+    build:
+      context: .
+      dockerfile: Dockerfile.platform
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=local
+      - SECRET_KEY=oasis_production_secure_key_849201
+    volumes:
+      - ./challenges:/app/challenges
+      - ./platform/ui:/app/platform/ui
+
+  # 2. Local Ollama Service (The AI Judge & Candidate LLM)
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    # Note: Requires running `docker exec ollama ollama run llama3` after startup
+
+  # 3. Domain A Challenge: Adversary Proxy
+  adversary_domain_a:
+    build:
+      context: ./challenges/domain_a_agentic_mcp
+      dockerfile: infra/Dockerfile.adversary
+    ports:
+      - "8080:8080"
+    depends_on:
+      - orchestrator
+
+  # 4. Local Web IDE (Code-Server) for Sandbox Simulation
+  ide:
+    image: lscr.io/linuxserver/code-server:latest
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - PASSWORD=password
+      - SUDO_PASSWORD=password
+    volumes:
+      - ./challenges:/config/workspace
+    ports:
+      - "8443:8443"
+
+volumes:
+  ollama_data:
