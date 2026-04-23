@@ -1,0 +1,8 @@
+name: "MLOps: Inference Optimization"
+domain: "MLOps & Model Deployment"
+description: "A PyTorch inference server is loading the model on every single request, causing high latency and OOM errors under load. You must optimize the deployment by implementing global model caching and basic request batching."
+difficulty: "Hard"
+stack:
+  - "PyTorch"
+  - "FastAPI"
+  - "AsyncIO"

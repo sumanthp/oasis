@@ -1,0 +1,8 @@
+name: "LLM Security: Jailbreak Defense"
+domain: "Prompt Engineering & Security"
+description: "A customer support bot is issuing unauthorized refunds due to prompt injections. You must implement input sanitization and defense-in-depth system prompts to block jailbreaks."
+difficulty: "Medium"
+stack:
+  - "LangChain"
+  - "FastAPI"
+  - "Regex"
