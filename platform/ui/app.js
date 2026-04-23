@@ -151,7 +151,8 @@ async function deployChallenge() {
                 currentSessionId = data.session_id;
                 document.getElementById('submit-btn').innerText = "Final Submit";
                 
-                ideFrame.src = `http://localhost:8443/?folder=/config/workspace/${challenge.id}/candidate_workspace`;
+                // Use the dynamically provisioned Docker port
+                ideFrame.src = `http://localhost:${data.ide_port}/?folder=/config/workspace`;
                 ideContainer.style.display = 'block';
                 startTimer();
             }, 3000);
@@ -255,19 +256,48 @@ async function submitSolution() {
         const data = await res.json();
         
         if (res.ok) {
-            btn.innerText = `Verdict: ${data.verdict}`;
-            alert(`Final Evaluation Complete!\nVerdict: ${data.verdict}\n\nFeedback: ${data.feedback}`);
-            closeIDE();
+            btn.innerText = "Evaluating in Cloud...";
+            
+            // Poll for completion
+            const pollInterval = setInterval(async () => {
+                try {
+                    const profileRes = await fetch('/api/profile', {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const profileData = await profileRes.json();
+                    
+                    // If session is no longer active, it must have completed
+                    if (!profileData.active_session || profileData.active_session.id !== currentSessionId) {
+                        clearInterval(pollInterval);
+                        
+                        // Find the latest evaluation for this session
+                        const latestEval = profileData.history && profileData.history.length > 0 
+                            ? profileData.history[0] 
+                            : null;
+                            
+                        if (latestEval) {
+                            btn.innerText = `Verdict: ${latestEval.verdict}`;
+                            alert(`Final Evaluation Complete!\nVerdict: ${latestEval.verdict}\n\nFeedback: ${latestEval.feedback}`);
+                        } else {
+                            alert("Evaluation finished but results could not be loaded.");
+                        }
+                        closeIDE();
+                    }
+                } catch (e) {
+                    console.error("Polling error:", e);
+                }
+            }, 3000);
+            
         } else {
             btn.innerText = "Error";
             alert("Failed to evaluate solution.");
+            btn.disabled = false;
         }
     } catch (err) {
         btn.innerText = "Error";
         console.error(err);
+        btn.disabled = false;
     }
-    
-    btn.disabled = false;
 }
 
 function logout() {

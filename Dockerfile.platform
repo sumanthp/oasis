@@ -4,7 +4,7 @@ WORKDIR /app
 
 # Install dependencies
 COPY pyproject.toml .
-RUN pip install --no-cache-dir fastapi uvicorn boto3 pydantic pyyaml sqlalchemy pyjwt "passlib[bcrypt]" "bcrypt==3.2.2"
+RUN pip install --no-cache-dir fastapi uvicorn boto3 pydantic pyyaml sqlalchemy pyjwt "passlib[bcrypt]" "bcrypt==3.2.2" "docker>=7.1.0" "requests<2.32"
 
 # Copy the platform code and challenges
 COPY platform/ ./platform/

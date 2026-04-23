@@ -2,11 +2,17 @@ from sqlalchemy import create_engine, Column, Integer, String, DateTime, Foreign
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 from datetime import datetime
 import os
+from pathlib import Path
 
-# Create SQLite database in the /app/platform directory
-DATABASE_URL = "sqlite:///./ai_engine.db"
+# Ensure data directory exists
+data_dir = Path(__file__).parent.parent.parent / "data"
+data_dir.mkdir(exist_ok=True)
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+SQLALCHEMY_DATABASE_URL = f"sqlite:///{data_dir}/ai_engine.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
@@ -26,9 +32,10 @@ class Session(Base):
     id = Column(String, primary_key=True, index=True)
     user_id = Column(String, ForeignKey("users.id"))
     challenge_id = Column(String)
-    status = Column(String, default="started")
+    status = Column(String, default="started") # running, completed, abandoned
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+    ide_port = Column(Integer, nullable=True) # Dynamically assigned Docker port
     ide_time_seconds = Column(Integer, nullable=True)
     
     user = relationship("User")
@@ -60,6 +67,7 @@ class Invite(Base):
 def init_db():
     Base.metadata.create_all(bind=engine)
     
+    # Seed default admin user
     # Seed default admin user
     from passlib.context import CryptContext
     pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

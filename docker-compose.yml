@@ -12,6 +12,8 @@ services:
     volumes:
       - ./challenges:/app/challenges
       - ./platform/ui:/app/platform/ui
+      - oasis_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
 
   # 2. Local Ollama Service (The AI Judge & Candidate LLM)
   ollama:
@@ -48,3 +50,4 @@ services:
 
 volumes:
   ollama_data:
+  oasis_data:

@@ -13,9 +13,11 @@ import jwt
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from pathlib import Path
+import docker
+import socket
 
 from . import database
-from .database import User, Session as DBSession, Evaluation
+from .database import User, Session as DBSession, Evaluation, SessionLocal
 import re
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "super-secret-mvp-key-do-not-use-in-prod")
@@ -200,9 +202,23 @@ async def list_challenges():
                     })
     return {"challenges": challenges}
 
+def get_host_challenges_path() -> str:
+    """Discovers the host path for the /app/challenges volume mount."""
+    try:
+        client = docker.from_env()
+        container_id = socket.gethostname()
+        container = client.containers.get(container_id)
+        for m in container.attrs.get('Mounts', []):
+            if m['Destination'] == '/app/challenges':
+                return m['Source']
+    except Exception as e:
+        print(f"Warning: Could not resolve docker host path: {e}")
+    # Fallback for local non-docker development
+    return str(Path(__file__).parent.parent.parent / "challenges")
+
 @app.post("/session/start")
 async def start_session(request: SessionRequest, user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
-    """Starts a sandbox session and creates a DB record."""
+    """Starts a sandbox session and creates a DB record with a dynamic IDE container."""
     if not re.match(r"^[a-zA-Z0-9_-]+$", request.challenge_id):
         raise HTTPException(status_code=400, detail="Invalid challenge ID format")
         
@@ -213,11 +229,45 @@ async def start_session(request: SessionRequest, user: User = Depends(get_curren
         raise HTTPException(status_code=404, detail=f"Challenge {request.challenge_id} not found")
         
     session_id = str(uuid.uuid4())
+    
+    # -----------------------------
+    # DYNAMIC CONTAINER PROVISIONING
+    # -----------------------------
+    ide_port = 8443
+    try:
+        host_challenges = get_host_challenges_path()
+        host_workspace = f"{host_challenges}/{request.challenge_id}/candidate_workspace"
+        
+        client = docker.from_env()
+        container = client.containers.run(
+            "lscr.io/linuxserver/code-server:latest",
+            name=f"ide_{session_id}",
+            environment=["PASSWORD=password", "SUDO_PASSWORD=password", "PUID=1000", "PGID=1000", "TZ=Etc/UTC"],
+            volumes={
+                host_workspace: {'bind': '/config/workspace', 'mode': 'rw'}
+            },
+            network="oasis_default", # Connect to internal network
+            ports={'8443/tcp': None}, # Ask Docker to assign a random free host port
+            detach=True
+        )
+        
+        # Reload to fetch assigned port
+        container.reload()
+        port_bindings = container.attrs['NetworkSettings']['Ports'].get('8443/tcp')
+        if port_bindings:
+            ide_port = int(port_bindings[0]['HostPort'])
+            
+    except Exception as e:
+        print(f"Failed to provision dynamic sandbox: {e}")
+        # If provisioning fails, we might still fallback to static 8443 for local MVP debugging
+        pass
+
     db_session = DBSession(
         id=session_id,
         user_id=user.id,
         challenge_id=request.challenge_id,
-        status="running"
+        status="running",
+        ide_port=ide_port
     )
     db.add(db_session)
     db.commit()
@@ -225,63 +275,148 @@ async def start_session(request: SessionRequest, user: User = Depends(get_curren
     return {
         "status": "provisioning",
         "session_id": session_id,
-        "challenge_id": request.challenge_id
+        "challenge_id": request.challenge_id,
+        "ide_port": ide_port
     }
 
 @app.post("/api/evaluate/test")
 async def trigger_test(req: EvaluationRequest, user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
-    """Runs the local grader.py script iteratively without saving the final verdict to DB."""
+    """Runs the grader script in an isolated Docker container without saving verdict."""
     db_session = db.query(DBSession).filter(DBSession.id == req.session_id, DBSession.user_id == user.id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
         
-    challenge_dir = Path(__file__).parent.parent.parent / "challenges" / db_session.challenge_id
-    grader_path = challenge_dir / "evaluator" / "grader.py"
-    
-    if not grader_path.exists():
-        raise HTTPException(status_code=404, detail="Grader not found for this challenge")
-        
     try:
-        result = subprocess.run(
-            ["python3", str(grader_path)], 
-            cwd=str(challenge_dir), 
-            capture_output=True, 
-            text=True, 
-            timeout=300
-        )
-        output = result.stdout + result.stderr
+        host_challenges = get_host_challenges_path()
+        host_challenge_dir = f"{host_challenges}/{db_session.challenge_id}"
         
+        client = docker.from_env()
+        output = ""
+        try:
+            # We install httpx/requests if they need it in the test container
+            cmd = "sh -c 'pip install -q -r /candidate_workspace/requirements.txt 2>/dev/null; python3 /evaluator/grader.py'"
+            logs = client.containers.run(
+                "python:3.10-slim",
+                command=cmd,
+                volumes={
+                    f"{host_challenge_dir}/evaluator": {'bind': '/evaluator', 'mode': 'ro'},
+                    f"{host_challenge_dir}/candidate_workspace": {'bind': '/candidate_workspace', 'mode': 'ro'}
+                },
+                network="oasis_default",
+                remove=True,
+                detach=False
+            )
+            output = logs.decode('utf-8')
+        except docker.errors.ContainerError as e:
+            output = e.stderr.decode('utf-8') + "\n" + e.stdout.decode('utf-8')
+        except Exception as e:
+            output = str(e)
+            
         verdict = "REVIEW"
         if "HIRE" in output or "SUCCESS" in output or "PASS" in output:
             verdict = "HIRE"
         if "FAIL" in output or "ERROR" in output:
             verdict = "PASS"
             
-        feedback_text = output.split('\n')[-2] if len(output.split('\n')) > 1 else "Execution completed."
-        
-    except subprocess.TimeoutExpired:
-        verdict = "REVIEW"
-        feedback_text = "Evaluation timed out after 5 minutes."
+        lines = [line.strip() for line in output.split('\n') if line.strip()]
+        feedback_text = lines[-1] if lines else "Execution completed."
+        if "Feedback:" in feedback_text:
+            feedback_text = feedback_text.split("Feedback:")[1].strip()
+            
     except Exception as e:
         verdict = "REVIEW"
-        feedback_text = f"Grader execution failed: {str(e)}"
+        feedback_text = f"Grader container failed: {str(e)}"
         
     return {"status": "success", "verdict": verdict, "feedback": feedback_text}
 
+
+def run_evaluation_task(session_id: str, challenge_id: str, candidate_code: str, started_at: datetime):
+    """Background task to run grader in Docker, update DB, and tear down IDE."""
+    db = SessionLocal()
+    try:
+        host_challenges = get_host_challenges_path()
+        host_challenge_dir = f"{host_challenges}/{challenge_id}"
+        
+        client = docker.from_env()
+        start_time = time.time()
+        output = ""
+        try:
+            cmd = "sh -c 'pip install -q -r /candidate_workspace/requirements.txt 2>/dev/null; python3 /evaluator/grader.py'"
+            logs = client.containers.run(
+                "python:3.10-slim",
+                command=cmd,
+                volumes={
+                    f"{host_challenge_dir}/evaluator": {'bind': '/evaluator', 'mode': 'ro'},
+                    f"{host_challenge_dir}/candidate_workspace": {'bind': '/candidate_workspace', 'mode': 'ro'}
+                },
+                network="oasis_default",
+                remove=True,
+                detach=False
+            )
+            output = logs.decode('utf-8')
+        except docker.errors.ContainerError as e:
+            output = e.stderr.decode('utf-8') + "\n" + e.stdout.decode('utf-8')
+        except Exception as e:
+            output = str(e)
+            
+        verdict = "REVIEW"
+        if "HIRE" in output or "SUCCESS" in output or "PASS" in output:
+            verdict = "HIRE"
+        if "FAIL" in output or "ERROR" in output:
+            verdict = "PASS"
+            
+        lines = [line.strip() for line in output.split('\n') if line.strip()]
+        feedback_text = lines[-1] if lines else "Execution completed."
+        if "Feedback:" in feedback_text:
+            feedback_text = feedback_text.split("Feedback:")[1].strip()
+            
+        # Update DB
+        db_session = db.query(DBSession).filter(DBSession.id == session_id).first()
+        if db_session:
+            now = datetime.utcnow()
+            exec_time = int(time.time() - start_time)
+            ide_time_seconds = int((now - started_at).total_seconds())
+            
+            db_session.completed_at = now
+            db_session.status = "completed"
+            db_session.ide_time_seconds = ide_time_seconds
+            
+            evaluation = Evaluation(
+                session_id=session_id,
+                execution_time_seconds=exec_time,
+                verdict=verdict,
+                feedback_text=feedback_text[:255],
+                candidate_code=candidate_code,
+                ai_trace_logs=output
+            )
+            db.add(evaluation)
+            db.commit()
+            
+        # Tear down IDE container
+        try:
+            ide = client.containers.get(f"ide_{session_id}")
+            ide.stop(timeout=2)
+            ide.remove(force=True)
+        except Exception as e:
+            print(f"Failed to teardown IDE {session_id}: {e}")
+            
+    finally:
+        db.close()
+
+
 @app.post("/api/evaluate/submit")
-async def trigger_submit(req: EvaluationRequest, user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
-    """Triggers the local grader.py script and saves the verdict."""
+async def trigger_submit(req: EvaluationRequest, background_tasks: BackgroundTasks, user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
+    """Triggers async evaluation in a BackgroundTask."""
     db_session = db.query(DBSession).filter(DBSession.id == req.session_id, DBSession.user_id == user.id).first()
     if not db_session:
         raise HTTPException(status_code=404, detail="Session not found")
         
+    db_session.status = "evaluating"
+    db.commit()
+    
     challenge_dir = Path(__file__).parent.parent.parent / "challenges" / db_session.challenge_id
-    grader_path = challenge_dir / "evaluator" / "grader.py"
     workspace_dir = challenge_dir / "candidate_workspace"
     
-    if not grader_path.exists():
-        raise HTTPException(status_code=404, detail="Grader not found for this challenge")
-        
     # Read candidate code
     candidate_code = ""
     if workspace_dir.exists():
@@ -291,60 +426,16 @@ async def trigger_submit(req: EvaluationRequest, user: User = Depends(get_curren
                     candidate_code += f"# --- {py_file.name} ---\n{f.read()}\n\n"
             except:
                 pass
-    
-    start_time = time.time()
-    
-    try:
-        # Run the grader as a subprocess. This simulates the Cloud AI Judge evaluation.
-        result = subprocess.run(
-            ["python3", str(grader_path)], 
-            cwd=str(challenge_dir), 
-            capture_output=True, 
-            text=True, 
-            timeout=300
-        )
-        output = result.stdout + result.stderr
-        
-        # Simple heuristic to determine verdict from output
-        verdict = "REVIEW"
-        if "HIRE" in output or "SUCCESS" in output or "PASS" in output:
-            verdict = "HIRE"
-        if "FAIL" in output or "ERROR" in output:
-            verdict = "PASS" # Not a hire, but passed the test suite completion.
-            
-        feedback_text = output.split('\n')[-2] if len(output.split('\n')) > 1 else "Execution completed."
-        
-    except subprocess.TimeoutExpired:
-        verdict = "REVIEW"
-        feedback_text = "Evaluation timed out after 5 minutes."
-        output = "{\"error\": \"timeout\"}"
-    except Exception as e:
-        verdict = "REVIEW"
-        feedback_text = f"Grader execution failed: {str(e)}"
-        output = str(e)
-        
-    exec_time = int(time.time() - start_time)
-    
-    # Calculate exact IDE time
-    now = datetime.utcnow()
-    ide_time_seconds = int((now - db_session.started_at).total_seconds())
-    
-    db_session.completed_at = now
-    db_session.status = "completed"
-    db_session.ide_time_seconds = ide_time_seconds
-    
-    evaluation = Evaluation(
-        session_id=req.session_id,
-        execution_time_seconds=exec_time,
-        verdict=verdict,
-        feedback_text=feedback_text[:255], # truncate
+                
+    background_tasks.add_task(
+        run_evaluation_task, 
+        session_id=db_session.id, 
+        challenge_id=db_session.challenge_id, 
         candidate_code=candidate_code,
-        ai_trace_logs=output
+        started_at=db_session.started_at
     )
-    db.add(evaluation)
-    db.commit()
     
-    return {"status": "success", "verdict": verdict, "feedback": feedback_text}
+    return {"status": "evaluating", "message": "Evaluation started in background."}
 
 @app.get("/api/admin/evaluations")
 async def get_evaluations(admin: User = Depends(require_admin), db: Session = Depends(database.get_db)):
