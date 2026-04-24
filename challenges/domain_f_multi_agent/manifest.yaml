@@ -1,0 +1,19 @@
+name: "Multi-Agent Supervisor Routing"
+version: "1.0.0"
+description: "A customer intelligence system routes queries to the wrong specialist agent. The Supervisor Agent's routing logic is broken — queries about billing go to the technical support worker, and vice versa. Fix the LangGraph supervisor to correctly classify and route incoming requests to the appropriate specialist (RAG Worker or API Worker)."
+difficulty: "medium"
+tags: ["LangGraph", "Multi-Agent", "Supervisor Pattern", "Routing"]
+
+infrastructure:
+  services: []
+
+evaluation:
+  timeout_seconds: 120
+  metrics:
+    - name: "Correct Routing"
+      type: "trace-analysis"
+      description: "Ensure billing queries route to the billing_worker and technical queries route to the tech_worker."
+    - name: "Supervisor Decision Quality"
+      type: "llm-judge"
+      description: "Evaluate if the supervisor makes a clear, justified routing decision for edge-case queries."
+  grader_script: "evaluator/grader.py"

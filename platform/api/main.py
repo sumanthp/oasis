@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status
+from fastapi import FastAPI, HTTPException, Depends, BackgroundTasks, status, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -15,6 +15,7 @@ from passlib.context import CryptContext
 from pathlib import Path
 import docker
 import socket
+from typing import Dict, List
 
 from . import database
 from .database import User, Session as DBSession, Evaluation, SessionLocal
@@ -511,3 +512,73 @@ async def get_profile(user: User = Depends(get_current_user), db: Session = Depe
         profile_data["stats"] = {"total_evaluations_platform": total_evals}
         
     return profile_data
+
+# --- ANTI-CHEATING TELEMETRY ---
+
+class TelemetryEvent(BaseModel):
+    session_id: str
+    event_type: str  # "tab_switch" or "paste"
+
+@app.post("/api/telemetry")
+async def report_telemetry(event: TelemetryEvent, user: User = Depends(get_current_user), db: Session = Depends(database.get_db)):
+    """Records anti-cheating telemetry events (tab switches, pastes)."""
+    db_session = db.query(DBSession).filter(
+        DBSession.id == event.session_id, 
+        DBSession.user_id == user.id,
+        DBSession.status == "running"
+    ).first()
+    if not db_session:
+        raise HTTPException(status_code=404, detail="Active session not found")
+    
+    if event.event_type == "tab_switch":
+        db_session.tab_switch_count = (db_session.tab_switch_count or 0) + 1
+    elif event.event_type == "paste":
+        db_session.paste_count = (db_session.paste_count or 0) + 1
+    
+    db.commit()
+    return {"status": "recorded"}
+
+# --- ACTIVE SESSIONS (for Live Interview) ---
+
+@app.get("/api/admin/sessions/active")
+async def get_active_sessions(admin: User = Depends(require_admin), db: Session = Depends(database.get_db)):
+    """Returns all currently running candidate sessions for live interview join."""
+    active = db.query(DBSession).filter(DBSession.status == "running").all()
+    sessions = []
+    for s in active:
+        sessions.append({
+            "session_id": s.id,
+            "candidate": s.user.username,
+            "challenge_id": s.challenge_id,
+            "ide_port": s.ide_port,
+            "started_at": s.started_at.strftime("%H:%M:%S"),
+            "tab_switches": s.tab_switch_count or 0,
+            "paste_count": s.paste_count or 0
+        })
+    return {"sessions": sessions}
+
+# --- LIVE INTERVIEW WEBSOCKET ---
+
+# In-memory store for active WebSocket connections per session
+active_connections: Dict[str, List[WebSocket]] = {}
+
+@app.websocket("/ws/interview/{session_id}")
+async def websocket_interview(websocket: WebSocket, session_id: str):
+    """WebSocket endpoint for live interview chat between recruiter and candidate."""
+    await websocket.accept()
+    
+    if session_id not in active_connections:
+        active_connections[session_id] = []
+    active_connections[session_id].append(websocket)
+    
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # Broadcast to all connections in this session
+            for connection in active_connections[session_id]:
+                if connection != websocket:
+                    await connection.send_text(data)
+    except WebSocketDisconnect:
+        active_connections[session_id].remove(websocket)
+        if not active_connections[session_id]:
+            del active_connections[session_id]

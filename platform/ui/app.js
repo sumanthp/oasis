@@ -175,6 +175,38 @@ function startTimer() {
         const secs = String(diff % 60).padStart(2, '0');
         timerDisplay.innerText = `${mins}:${secs}`;
     }, 1000);
+
+    // --- ANTI-CHEATING TELEMETRY ---
+    document.addEventListener('visibilitychange', handleTabSwitch);
+    window.addEventListener('blur', handleWindowBlur);
+}
+
+function handleTabSwitch() {
+    if (document.hidden && currentSessionId) {
+        reportTelemetry('tab_switch');
+    }
+}
+
+function handleWindowBlur() {
+    if (currentSessionId) {
+        reportTelemetry('tab_switch');
+    }
+}
+
+async function reportTelemetry(eventType) {
+    try {
+        const token = localStorage.getItem('ai_token');
+        await fetch('/api/telemetry', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ session_id: currentSessionId, event_type: eventType })
+        });
+    } catch (e) {
+        // Silently fail — telemetry should never block the candidate
+    }
 }
 
 function stopTimer() {
@@ -186,6 +218,10 @@ function closeIDE() {
     const ideContainer = document.getElementById('ide-container');
     const ideFrame = document.getElementById('ide-frame');
     const titleText = document.querySelector('.premium-text');
+    
+    // Remove telemetry listeners
+    document.removeEventListener('visibilitychange', handleTabSwitch);
+    window.removeEventListener('blur', handleWindowBlur);
     
     // Restore UI
     document.body.classList.remove('ide-active');

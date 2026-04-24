@@ -37,6 +37,8 @@ class Session(Base):
     completed_at = Column(DateTime, nullable=True)
     ide_port = Column(Integer, nullable=True) # Dynamically assigned Docker port
     ide_time_seconds = Column(Integer, nullable=True)
+    tab_switch_count = Column(Integer, default=0)  # Anti-cheating telemetry
+    paste_count = Column(Integer, default=0)        # Anti-cheating telemetry
     
     user = relationship("User")
     evaluations = relationship("Evaluation", back_populates="session")

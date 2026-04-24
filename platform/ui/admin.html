@@ -111,6 +111,113 @@
             overflow-y: auto;
             margin-bottom: 1rem;
         }
+        
+        .live-panel {
+            background: var(--glass-bg);
+            border: 1px solid rgba(0, 255, 128, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem;
+            backdrop-filter: blur(15px);
+            margin-bottom: 2rem;
+        }
+        .live-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #00ff80;
+            animation: livePulse 1.5s infinite;
+            margin-right: 8px;
+        }
+        @keyframes livePulse { 50% { opacity: 0.3; } }
+        .live-session-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .live-session-row:last-child { border-bottom: none; }
+        .telemetry-flag {
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        .telemetry-flag.warn { background: rgba(255, 204, 0, 0.2); color: #ffcc00; }
+        .telemetry-flag.clean { background: rgba(0, 255, 128, 0.15); color: #00ff80; }
+        
+        .chat-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 380px;
+            max-height: 450px;
+            background: rgba(10, 10, 20, 0.95);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            backdrop-filter: blur(15px);
+            display: none;
+            flex-direction: column;
+            z-index: 1000;
+        }
+        .chat-container.active { display: flex; }
+        .chat-header {
+            padding: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-header h3 { color: white; font-size: 0.95rem; margin: 0; }
+        .chat-messages {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            max-height: 280px;
+        }
+        .chat-msg {
+            padding: 0.5rem 0.75rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            max-width: 80%;
+        }
+        .chat-msg.sent {
+            background: rgba(99, 102, 241, 0.3);
+            color: white;
+            margin-left: auto;
+        }
+        .chat-msg.received {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ccc;
+        }
+        .chat-input-row {
+            display: flex;
+            padding: 0.75rem;
+            border-top: 1px solid var(--glass-border);
+            gap: 0.5rem;
+        }
+        .chat-input-row input {
+            flex: 1;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            color: white;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .chat-input-row button {
+            background: var(--accent-cyan);
+            border: none;
+            color: #000;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
     </style>
 </head>
 <body>
@@ -162,6 +269,13 @@
             </div>
         </div>
 
+        <div class="live-panel" id="live-panel" style="display: none;">
+            <h2 style="color: white; font-size: 1.3rem; margin-bottom: 1rem;"><span class="live-dot"></span> Live Sessions</h2>
+            <div id="live-sessions-list">
+                <p style="color: var(--text-dim);">No active sessions.</p>
+            </div>
+        </div>
+
         <h2 class="premium-text" style="font-size: 1.5rem; margin-bottom: 1rem;">Candidate Submissions</h2>
         <table class="results-table">
             <thead>
@@ -203,9 +317,24 @@
         </div>
     </div>
     
+    <!-- Live Interview Chat Widget -->
+    <div class="chat-container" id="chat-widget">
+        <div class="chat-header">
+            <h3 id="chat-session-title">Live Interview</h3>
+            <button onclick="closeLiveChat()" style="background:none; border:none; color:var(--text-dim); font-size:1.2rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-row">
+            <input type="text" id="chat-input" placeholder="Type a message..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+            <button onclick="sendChatMessage()">Send</button>
+        </div>
+    </div>
+    
     <script>
         let chartInstance = null;
         let globalEvaluations = [];
+        let liveWs = null;
+        let liveSessionId = null;
 
         document.addEventListener('DOMContentLoaded', async () => {
             const tbody = document.getElementById('results-body');
@@ -223,6 +352,10 @@
                 document.getElementById('unauthorized-content').style.display = 'block';
                 return;
             }
+            
+            // Start polling for live sessions
+            pollLiveSessions();
+            setInterval(pollLiveSessions, 5000);
             
             try {
                 const res = await fetch('/api/admin/evaluations', {
@@ -332,6 +465,104 @@
                 localStorage.removeItem('ai_candidate_name');
                 window.location.href = '/';
             }, 400);
+        }
+
+        // --- LIVE SESSION POLLING ---
+        async function pollLiveSessions() {
+            const token = localStorage.getItem('ai_token');
+            try {
+                const res = await fetch('/api/admin/sessions/active', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                const panel = document.getElementById('live-panel');
+                const list = document.getElementById('live-sessions-list');
+                
+                if (data.sessions.length === 0) {
+                    panel.style.display = 'none';
+                    return;
+                }
+                
+                panel.style.display = 'block';
+                list.innerHTML = '';
+                data.sessions.forEach(s => {
+                    const tabFlag = s.tab_switches > 2 
+                        ? `<span class="telemetry-flag warn">⚠ ${s.tab_switches} Tab Switches</span>` 
+                        : `<span class="telemetry-flag clean">✓ Clean</span>`;
+                    
+                    const row = document.createElement('div');
+                    row.className = 'live-session-row';
+                    row.innerHTML = `
+                        <div>
+                            <strong style="color:white;">${s.candidate}</strong>
+                            <span style="color:var(--text-dim); margin-left:0.5rem;">${s.challenge_id}</span>
+                            <span style="color:var(--text-dim); margin-left:0.5rem;">Started: ${s.started_at}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:1rem;">
+                            ${tabFlag}
+                            <button onclick="joinLiveChat('${s.session_id}', '${s.candidate}')" class="btn-primary" style="padding:5px 12px; font-size:0.8rem; background: linear-gradient(135deg, #00ff80, #00c864);">💬 Join Live</button>
+                        </div>
+                    `;
+                    list.appendChild(row);
+                });
+            } catch (e) {
+                console.error('Live session poll error:', e);
+            }
+        }
+
+        // --- WEBSOCKET LIVE CHAT ---
+        function joinLiveChat(sessionId, candidateName) {
+            if (liveWs) liveWs.close();
+            liveSessionId = sessionId;
+            
+            const chatWidget = document.getElementById('chat-widget');
+            const chatMessages = document.getElementById('chat-messages');
+            document.getElementById('chat-session-title').innerText = `Live: ${candidateName}`;
+            chatMessages.innerHTML = '';
+            chatWidget.classList.add('active');
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            liveWs = new WebSocket(`${protocol}//${window.location.host}/ws/interview/${sessionId}`);
+            
+            liveWs.onmessage = (event) => {
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'chat-msg received';
+                msgDiv.innerText = event.data;
+                chatMessages.appendChild(msgDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            };
+            
+            liveWs.onclose = () => {
+                const sysMsg = document.createElement('div');
+                sysMsg.className = 'chat-msg received';
+                sysMsg.style.fontStyle = 'italic';
+                sysMsg.innerText = '[Connection closed]';
+                chatMessages.appendChild(sysMsg);
+            };
+        }
+
+        function sendChatMessage() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text || !liveWs) return;
+            
+            const name = localStorage.getItem('ai_candidate_name') || 'Recruiter';
+            const msg = `[${name}]: ${text}`;
+            liveWs.send(msg);
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'chat-msg sent';
+            msgDiv.innerText = msg;
+            document.getElementById('chat-messages').appendChild(msgDiv);
+            document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight;
+            
+            input.value = '';
+        }
+
+        function closeLiveChat() {
+            if (liveWs) liveWs.close();
+            document.getElementById('chat-widget').classList.remove('active');
         }
     </script>
 </body>
