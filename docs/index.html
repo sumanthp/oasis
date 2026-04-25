@@ -21,6 +21,7 @@
         </div>
         <div class="nav-links">
             <a href="#features">Features</a>
+            <a href="#upcoming">Roadmap</a>
             <a href="#architecture">Architecture</a>
             <a href="https://github.com/sumanthp/oasis" target="_blank" class="btn-outline">View on GitHub</a>
         </div>
@@ -33,7 +34,7 @@
             <p class="hero-subtitle">Stop relying on generic LeetCode puzzles. Drop candidates into a real, sandboxed "broken production" environment with a built-in automated LLM Judge.</p>
             <div class="hero-actions">
                 <a href="https://github.com/sumanthp/oasis" class="btn-primary">Clone Repository</a>
-                <a href="#quickstart" class="btn-secondary">Read the Docs</a>
+                <a href="#upcoming" class="btn-secondary">Explore Roadmap</a>
             </div>
         </div>
         <div class="hero-visual">
@@ -88,8 +89,68 @@
         </div>
     </section>
 
+    <section id="upcoming" class="section roadmap-section">
+        <div class="section-kicker">COMING NEXT</div>
+        <h2 class="section-title compact-title">From Sandbox MVP to Enterprise Hiring OS</h2>
+        <p class="section-intro">The next wave of Oasis turns realistic AI engineering simulations into a governed, audit-ready assessment platform for hiring teams.</p>
+
+        <div class="roadmap-hero glass-card">
+            <div class="roadmap-copy">
+                <span class="status-pill">Enterprise roadmap</span>
+                <h3>AI assists evaluation. Humans make the hiring decision.</h3>
+                <p>Upcoming workflows focus on structured evidence, reviewer calibration, compliance exports, and isolated candidate environments built for security reviews.</p>
+            </div>
+            <div class="signal-grid" aria-label="Upcoming platform signals">
+                <div class="signal-card">
+                    <span>01</span>
+                    <strong>Structured Scorecards</strong>
+                    <p>Rubric dimensions, evidence trails, confidence, and reviewer override.</p>
+                </div>
+                <div class="signal-card">
+                    <span>02</span>
+                    <strong>Secure Sandboxes</strong>
+                    <p>Per-session workspaces, hardened orchestration, and artifact snapshots.</p>
+                </div>
+                <div class="signal-card">
+                    <span>03</span>
+                    <strong>Compliance Center</strong>
+                    <p>Candidate notices, audit packets, adverse-impact reporting, and retention controls.</p>
+                </div>
+                <div class="signal-card">
+                    <span>04</span>
+                    <strong>ATS Integrations</strong>
+                    <p>SSO, SCIM, webhooks, and hiring-system sync for enterprise workflows.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-marker">1</div>
+                <div>
+                    <h3>Harden The MVP</h3>
+                    <p>Structured grader JSON, per-session workspace cloning, invite expiry, safer secrets, and core regression tests.</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-marker">2</div>
+                <div>
+                    <h3>Enterprise Control Plane</h3>
+                    <p>Organizations, jobs, candidates, scoped RBAC, Postgres migrations, artifact storage, and audit logs.</p>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-marker">3</div>
+                <div>
+                    <h3>Hiring-Grade Evaluation</h3>
+                    <p>Rubric builder, deterministic checks, trace analysis, LLM-assisted review, calibration, and human decision records.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <section id="domains" class="section">
-        <h2 class="section-title">5 Pre-Loaded Domains</h2>
+        <h2 class="section-title">6 Pre-Loaded Domains</h2>
         <div class="feature-grid">
             <div class="glass-card feature-card">
                 <h3>Domain A: Agentic MCP</h3>
@@ -110,6 +171,10 @@
             <div class="glass-card feature-card">
                 <h3>Domain E: AI SWE</h3>
                 <p>Debug core Python algorithms using an AI coding assistant.</p>
+            </div>
+            <div class="glass-card feature-card">
+                <h3>Domain F: Multi-Agent Systems</h3>
+                <p>Evaluate orchestration, delegation, and failure recovery across cooperating AI agents.</p>
             </div>
         </div>
     </section>
@@ -138,6 +203,10 @@
                 <h3>Persistent Storage</h3>
                 <p>Metadata and candidate trace logs are safely stored via mounted SQLite volumes, ensuring crash resilience.</p>
             </div>
+        </div>
+        <div class="architecture-note glass-card">
+            <span>Roadmap architecture</span>
+            <p>Production deployments will move toward Postgres, object storage, queue-backed evaluation runners, managed secrets, OpenTelemetry, and sandbox orchestration through ECS/Fargate, Kubernetes, or another hardened worker layer.</p>
         </div>
     </section>
 
